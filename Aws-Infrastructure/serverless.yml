@@ -1,0 +1,164 @@
+# Welcome to serverless. Read the docs
+service: serverless-aws-infrastructure
+
+frameworkVersion: "3"
+
+custom:
+  SERVICE_NAME: ${self:service}
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+
+# The `provider` block defines where your service will be deployed
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: ${self:custom.stage}
+  region: ${self:custom.region}
+  environment:
+    region: ${self:custom.region}
+    serviceName: ${self:service}
+    stage: ${self:custom.stage}
+    SQS_QUEUE_URL: https://sqs.${self:custom.region}.amazonaws.com/148391135058/${self:service}-${self:custom.stage}-send-message
+    SNS_TOPIC_URL: arn:aws:sns:${self:custom.region}:148391135058:${self:service}-${self:custom.stage}-inbound-topic
+    DDB_TABLE: ${self:service}-${self:custom.stage}-inbound-message
+  deploymentBucket:
+    name: sls-deploy-validation-us-east-1
+    serverSideEncryption: AES256
+  versionFunctions: false
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "sqs:SendMessage"
+        - "sqs:GetQueueUrl"
+      Resource: "arn:aws:sqs:${self:custom.region}:148391135058:${self:service}-${self:custom.stage}-send-message"
+    - Effect: "Allow"
+      Action:
+        - "sqs:ListQueues"
+      Resource: "arn:aws:sqs:${self:custom.region}:148391135058:${self:service}-${self:custom.stage}-send-message"
+    - Effect: "Allow"
+      Action:
+        - sns:Publish
+        - sns:CreateTopic
+      Resource: "arn:aws:sns:${self:custom.region}:148391135058:${self:service}-${self:custom.stage}-inbound-topic"
+    - Effect: 'Allow'
+      Action:
+        - DynamoDB:Query
+        - DynamoDB:Scan
+        - DynamoDB:Query
+        - DynamoDB:GetItem
+        - DynamoDB:PutItem
+        - DynamoDB:UpdateItem
+        - DynamoDB:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:service}-${self:custom.stage}-inbound-message"
+    
+# The `functions` block defines what code to deploy
+functions:
+  sendMessage:
+    handler: src/sendMessageToDb.sendMessage
+    memorySize: 128
+    description: Send message to SQS from POST Lambda API.
+    events:
+      - http: 
+          path: send-message
+          method: post
+          cors: true
+
+  triggeredMessage:
+    handler: src/triggeredMessageFromSQS.triggeredMessage
+    memorySize: 128
+    description: retrieve triggered message from SQS through POST Lambda API.
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - MySendMessageQueue
+              - Arn
+    reservedConcurrency: 1
+
+  triggeredMessageFromSNS:
+    handler: src/triggeredMessageFromSNS.triggeredMessageFromSNS
+    memorySize: 128
+    description: retrieve triggered message from SNS through POST Lambda API.
+    events:
+      - sns:
+          arn: !Ref InboundSnsTopic
+          topicName: Inbound-Sns-Topic
+    reservedConcurrency: 1
+
+  getItemList:
+    handler: src/getMessageFromDDB.getMessageList
+    memorySize: 128
+    description: Get message from DDB using GET Lambda API.
+    events:
+      - http: 
+          path: get-message
+          method: GET
+          cors: true
+
+  getItemById:
+    handler: src/getMessageFromDDB.getMessageById
+    memorySize: 128
+    description: Get specific message by ID from DDB using GET Lambda API.
+    events:
+      - http: 
+          path: get-message/{id}
+          method: GET
+          cors: true
+
+  getItemByMessageType:
+    handler: src/getMessageFromDDB.getMessageBymessageTpe
+    memorySize: 128
+    description: Get specific message by messageType from DDB using GET Lambda API.
+    events:
+      - http: 
+          path: get-message-type/{type}
+          method: GET
+          cors: true
+
+  updateItem:
+    handler: src/updateMessageInDDB.updateMessage
+    memorySize: 128
+    description: Update specific record in DDB using GET Lambda API.
+    events:
+      - http: 
+          path: update/{id}
+          method: patch
+          cors: true
+
+  deleteItem:
+    handler: src/deleteMessageFromDDB.deleteMessage
+    memorySize: 128
+    description: Delete specific record in DDB using GET Lambda API.
+    events:
+      - http: 
+          path: delete/{id}
+          method: delete
+          cors: true
+
+resources:
+  Resources:
+    MySendMessageQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${self:custom.stage}-send-message
+
+    InboundSnsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:service}-${self:custom.stage}-inbound-topic
+
+    MyDDBTable: 
+      Type: "AWS::DynamoDB::Table"
+      Properties: 
+        AttributeDefinitions: 
+          - 
+            AttributeName: id
+            AttributeType: S
+        KeySchema: 
+          - 
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput: 
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:service}-${self:custom.stage}-inbound-message
