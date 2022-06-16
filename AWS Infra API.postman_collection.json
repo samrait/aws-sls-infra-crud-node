@@ -1,0 +1,111 @@
+{
+	"info": {
+		"_postman_id": "a512d8f3-6f80-455d-90e5-de1b705d461a",
+		"name": "AWS Infra API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Send Message To SQS",
+			"request": {
+				"auth": {
+					"type": "awsv4",
+					"awsv4": [
+						{
+							"key": "service",
+							"value": "mobiletargeting",
+							"type": "string"
+						},
+						{
+							"key": "region",
+							"value": "US East",
+							"type": "string"
+						},
+						{
+							"key": "secretKey",
+							"value": "S15OvHs/hH2lyxi8vQyv0HehHtkvf6/WbuO80DiV",
+							"type": "string"
+						},
+						{
+							"key": "accessKey",
+							"value": "AKIASFDGNA5JG2CTOHM3",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"MessageType\":\"SMS\",\r\n    \"id\":\"1101\",\r\n    \"name\":\"Shishir Meshram\",\r\n    \"body\":\"Hi, This is a test text message.\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://fjtwyzhiuh.execute-api.us-east-1.amazonaws.com/dev/send-message",
+					"protocol": "https",
+					"host": [
+						"fjtwyzhiuh",
+						"execute-api",
+						"us-east-1",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"dev",
+						"send-message"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Items from DDb",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": null
+			},
+			"response": []
+		},
+		{
+			"name": "Get Particular Item by ID from DDb",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": null
+			},
+			"response": []
+		},
+		{
+			"name": "Get Particular Item by messageType from DDb",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": null
+			},
+			"response": []
+		},
+		{
+			"name": "Update Particular Record In DDb",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": null
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Particular Record From DDb",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": null
+			},
+			"response": []
+		}
+	]
+}
